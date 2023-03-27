@@ -1,16 +1,12 @@
 CXX = g++
-UNITTEST_FLAGS = -std=c++20 -I.. -I../doctest
-FLAGS = -std=c++20 -O3
-TEST_OBJECTS = AtomicFlagGuard.o
+UNITTEST_FLAGS = -std=c++23 -g
+FLAGS = -std=c++23 -O3
+INCLUDE_DIRS = -I ./production -I ./testing/doctest -I ./testing
+TARGET_DIR = ../build
+TEST_TARGET_DIR = ../tests
 
-Unittests: Unittests.o $(TEST_OBJECTS)
-	$(CXX) $(UNITTEST_FLAGS) $^ -o $@
-
-Unittests.o: ../Unittests.cpp $(TEST_OBJECTS)
-	$(CXX) -c $(UNITTEST_FLAGS) $< -o $@
-
-AtomicFlagGuard.o:  ../AtomicFlagGuard.cpp
-	$(CXX) -c $(UNITTEST_FLAGS) $< -o $@
+$(TEST_TARGET_DIR)/%.o : ./production/%.cpp
+	$(CXX) $(UNITTEST_FLAGS) $(INCLUDE_DIRS) -c -o $@ $<
 
 clean:
-	rm -rf *.o Unittests
+	rm -rf $(TARGET_DIR)/*.o $(TEST_TARGET_DIR)/*.o $(TEST_TARGET_DIR)/Unittests

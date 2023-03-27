@@ -1,2 +1,4 @@
-build
 obsolete
+*~
+*.sh
+stuff
