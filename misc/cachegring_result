@@ -1,0 +1,78 @@
+==82702== Cachegrind, a cache and branch-prediction profiler
+==82702== Copyright (C) 2002-2017, and GNU GPL'd, by Nicholas Nethercote et al.
+==82702== Using Valgrind-3.18.1-42b08ed5bd-20211015 and LibVEX; rerun with -h for copyright info
+==82702== Command: ./Profiling_CPU_aff RandTestDataRW.csv 4 6
+==82702== Parent PID: 2031
+==82702== 
+--82702-- 
+--82702-- Valgrind options:
+--82702--    --tool=cachegrind
+--82702--    --branch-sim=yes
+--82702--    --log-file=/home/nic/projects/CppOrderBook/tests/profiling/cachegring_output
+--82702--    -v
+--82702-- Contents of /proc/version:
+--82702--   Linux version 5.15.0-67-generic (buildd@lcy02-amd64-116) (gcc (Ubuntu 11.3.0-1ubuntu1~22.04) 11.3.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #74-Ubuntu SMP Wed Feb 22 14:14:39 UTC 2023
+--82702-- 
+--82702-- Arch and hwcaps: AMD64, LittleEndian, amd64-cx16-lzcnt-rdtscp-sse3-ssse3-avx-avx2-bmi-f16c-rdrand-rdseed
+--82702-- Page sizes: currently 4096, max supported 4096
+--82702-- Valgrind library directory: /usr/libexec/valgrind
+--82702-- warning: L3 cache found, using its data for the LL simulation.
+==82702== Cache configuration used:
+==82702==   I1: 32,768 B, 8-way, 64 B lines
+==82702==   D1: 49,152 B, 12-way, 64 B lines
+==82702==   LL: 8,388,608 B, 8-way, 64 B lines
+--82702-- Reading syms from /home/nic/projects/CppOrderBook/tests/profiling/Profiling_CPU_aff
+--82702-- Reading syms from /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+--82702--   Considering /usr/lib/debug/.build-id/61/ef896a699bb1c2e4e231642b2e1688b2f1a61e.debug ..
+--82702--   .. build-id is valid
+--82702-- Reading syms from /usr/libexec/valgrind/cachegrind-amd64-linux
+--82702--    object doesn't have a symbol table
+--82702--    object doesn't have a dynamic symbol table
+--82702-- Scheduler: using generic scheduler lock implementation.
+==82702== embedded gdbserver: reading from /tmp/vgdb-pipe-from-vgdb-to-82702-by-nic-on-???
+==82702== embedded gdbserver: writing to   /tmp/vgdb-pipe-to-vgdb-from-82702-by-nic-on-???
+==82702== embedded gdbserver: shared mem   /tmp/vgdb-pipe-shared-mem-vgdb-82702-by-nic-on-???
+==82702== 
+==82702== TO CONTROL THIS PROCESS USING vgdb (which you probably
+==82702== don't want to do, unless you know exactly what you're doing,
+==82702== or are doing some strange experiment):
+==82702==   /usr/bin/vgdb --pid=82702 ...command...
+==82702== 
+==82702== TO DEBUG THIS PROCESS USING GDB: start GDB like this
+==82702==   /path/to/gdb ./Profiling_CPU_aff
+==82702== and then give GDB the following command
+==82702==   target remote | /usr/bin/vgdb --pid=82702
+==82702== --pid is optional if only one valgrind process is running
+==82702== 
+--82702-- Reading syms from /usr/libexec/valgrind/vgpreload_core-amd64-linux.so
+--82702--    object doesn't have a symbol table
+--82702-- Reading syms from /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30
+--82702--    object doesn't have a symbol table
+--82702-- Reading syms from /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+--82702--    object doesn't have a symbol table
+--82702-- Reading syms from /usr/lib/x86_64-linux-gnu/libc.so.6
+--82702--   Considering /usr/lib/debug/.build-id/69/389d485a9793dbe873f0ea2c93e02efaa9aa3d.debug ..
+--82702--   .. build-id is valid
+--82702-- Reading syms from /usr/lib/x86_64-linux-gnu/libm.so.6
+--82702--   Considering /usr/lib/debug/.build-id/27/e82301dba6c3f644404d504e1bb1c97894b433.debug ..
+--82702--   .. build-id is valid
+==82702== 
+==82702== I   refs:      9,613,249,775,649
+==82702== I1  misses:                3,165
+==82702== LLi misses:                2,999
+==82702== I1  miss rate:              0.00%
+==82702== LLi miss rate:              0.00%
+==82702== 
+==82702== D   refs:      3,211,515,357,111  (3,203,328,059,653 rd   + 8,187,297,458 wr)
+==82702== D1  misses:            4,526,746  (        2,840,505 rd   +     1,686,241 wr)
+==82702== LLd misses:            4,418,180  (        2,732,833 rd   +     1,685,347 wr)
+==82702== D1  miss rate:               0.0% (              0.0%     +           0.0%  )
+==82702== LLd miss rate:               0.0% (              0.0%     +           0.0%  )
+==82702== 
+==82702== LL refs:               4,529,911  (        2,843,670 rd   +     1,686,241 wr)
+==82702== LL misses:             4,421,179  (        2,735,832 rd   +     1,685,347 wr)
+==82702== LL miss rate:                0.0% (              0.0%     +           0.0%  )
+==82702== 
+==82702== Branches:      3,190,323,739,667  (3,190,218,720,230 cond +   105,019,437 ind)
+==82702== Mispredicts:          38,875,804  (       15,202,240 cond +    23,673,564 ind)
+==82702== Mispred rate:                0.0% (              0.0%     +          22.5%   )
