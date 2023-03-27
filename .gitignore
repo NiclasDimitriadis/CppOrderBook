@@ -2,3 +2,5 @@ obsolete
 *~
 *.sh
 stuff
+build/*
+!build
