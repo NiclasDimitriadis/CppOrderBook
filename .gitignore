@@ -3,4 +3,7 @@ obsolete
 *.sh
 stuff
 build/*
-!build
+!tests_and_demos/unittests/build
+!tests_and_demos/profiling/build
+
+
