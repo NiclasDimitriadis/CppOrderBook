@@ -3,6 +3,8 @@
  - compilation requires C++23 support
  - CppOrderBook is intended for a x86_64 platform
 
+---
+
 #### project description:
 Limited scope project demonstrating reading an order-message from a socket, constructing a message
 object, possibly handing it off to another thread through a seqlock-queue and inserting it into an
@@ -25,9 +27,9 @@ Special emphasis was put on techniques enabling low-latency. Those include:
  and using std::atomic_flag as a lock instead of some flavor of mutex
  - memory-aligning objects in accordance with a 64-byte cacheline
  - ensuring fast multithreaded access to components that support concurrency, namely the seqlock-queue which enables wait-free enqueueing and lock-free dequeueing and the order book which supports lock-free reads via a seqlock as well (a lock is used required for manipulating book entries though) 
+ 
 
-
-
+---
 
 #### components:
 
@@ -35,9 +37,9 @@ Special emphasis was put on techniques enabling low-latency. Those include:
  `template <typename msgClassVariant_, typename socketType_>
  struct fixSocketHandler`
 ###### template parameters:
-- msgClassVariant_: std::variant of supported message type classes, subject to compile time
+- `msgClassVariant_`: std::variant of supported message type classes, subject to compile time
  checks regarding constructors and static members variables
-- socketType_: class of socket that messages will be read from, needs to satisfy concept Auxil::readablesAsSocket
+- `socketType_`: class of socket that messages will be read from, needs to satisfy concept Auxil::readablesAsSocket
 
 ###### description:
 - constructs FIX message objects from bytes read out of an object of a type providing a socket like interface
@@ -48,7 +50,7 @@ Special emphasis was put on techniques enabling low-latency. Those include:
 - `std::optional<MsgClassVar> readNextMessage()`:
  returns an optional including the a message object within a variant when a message of a type 
  contained in MSGClassVar is read an validated via checksum
- or an empty std::optional if message with a valid header of a type not included or a message is 
+ or an empty `std::optional` if message with a valid header of a type not included or a message is 
  invalidated via checksum
 
 ###### limitations:
@@ -61,10 +63,10 @@ Special emphasis was put on techniques enabling low-latency. Those include:
 `template<typename contentType_, std::uint32_t alignment>
 struct seqLockElement`
 ###### template parameters:
-- contentType_: type of objects to be entered into seqlock queue, must satisfy constraints
- std::is_default_constructible_v and std::is_trivially_copyable_v for construction of empty 
+- `contentType_`: type of objects to be entered into seqlock queue, must satisfy constraints
+ `std::is_default_constructible_v` and `std::is_trivially_copyable_v` for construction of empty 
  queue and insertion respectively
-- alignment: alignment of element in queue, use 0 for default alignment
+- `alignment`: alignment of element in queue, use 0 for default alignment
 
 ###### description: 
 - encapsulates single entry of seq-lock queue and a version number
@@ -84,9 +86,9 @@ struct seqLockElement`
  struct seqLockQueue`
 
 ###### template parameters:
-- contentType_: type of content queue contains
-- length_: number of elements in queue, must be a power of two
-- shareCacheline: each element in queue will be aligned to a full cacheline if shareCacheline == false
+- `contentType_`: type of content queue contains
+- `length_`: number of elements in queue, must be a power of two
+- `shareCacheline`: each element in queue will be aligned to a full cacheline if `shareCacheline == false`
  
 ###### description:
 - single-producer single-consumer queue utilizing a ring buffer that allows for wait-free enqueueing in lock-free dequeueing
