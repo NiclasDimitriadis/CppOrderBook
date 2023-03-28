@@ -1,7 +1,7 @@
 #### requirements:
  - project has been compiled using g++12.1.0 and tested on Ubuntu 22.04.2 LTS
  - compilation requires C++23 support
- - CppOrderBook is intended for a x86_64 platform
+ - CppOrderBook is intended to run on a x86_64 platform
 
 ---
 
@@ -39,7 +39,7 @@ Special emphasis was put on techniques enabling low-latency. Those include:
 ###### template parameters:
 - `msgClassVariant_`: std::variant of supported message type classes, subject to compile time
  checks regarding constructors and static members variables
-- `socketType_`: class of socket that messages will be read from, needs to satisfy concept Auxil::readablesAsSocket
+- `socketType_`: class of socket that messages will be read from, needs to satisfy concept Auxil::readableAsSocket
 
 ###### description:
 - constructs FIX message objects from bytes read out of an object of a type providing a socket like interface
