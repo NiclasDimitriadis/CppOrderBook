@@ -2,5 +2,4 @@ obsolete
 *~
 *.sh
 stuff
-*/build/Unittests*
-*/build/Profiling*
+**/build/**
