@@ -32,7 +32,7 @@ using seqLockQueue = SeqLockQueue::seqLockQueue<msgClassVar, twoPow20, false>;
 using sockHandler =
     FIXSocketHandler::fixSocketHandler<msgClassVar,
                                        FIXmockSocket::fixMockSocket>;
-using timePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
+using timePoint = decltype(std::chrono::high_resolution_clock::now());
 
 FIXmockSocket::fixMockSocket createMockSocket(const std::string& csvPath,
                                               std::atomic_flag* flagPtr) {
@@ -43,7 +43,7 @@ FIXmockSocket::fixMockSocket createMockSocket(const std::string& csvPath,
 void enqueueLogic(seqLockQueue* queuePtr, const std::string& csvPath,
                   std::atomic_flag* endOfBufferFlag, int coreIndex,
                   std::atomic_flag* signalFlag,
-                  timePoint* startTimePtr) noexcept {
+                  std::vector<timePoint>* startTimes) noexcept {
   // set up CPU-affinity for enqueueing thread
   cpu_set_t cpuSet;
   CPU_ZERO(&cpuSet);
@@ -67,19 +67,17 @@ void enqueueLogic(seqLockQueue* queuePtr, const std::string& csvPath,
   while (signalFlag->test()) {
   };
 
-  // take start time
-  auto startTime = std::chrono::high_resolution_clock::now();
-
   // read all messages for socket and enqueue them to be processed by other
   // thread
+  int index{0};
   while (!endOfBufferFlag->test(std::memory_order_acquire)) {
+     (*startTimes)[index] = std::chrono::high_resolution_clock::now();
     readRet = sHandler.readNextMessage();
     if (readRet.has_value()) {
       queuePtr->enqueue(readRet.value());
     };
+	++index;
   }
-
-  *startTimePtr = startTime;
 }
 
 int main(int argc, char* argv[]) {
@@ -91,43 +89,42 @@ int main(int argc, char* argv[]) {
   bool invalidIndex = enqCoreIndex < 0 || enqCoreIndex > nCores ||
                       deqCoreIndex < 0 || deqCoreIndex > nCores;
   if (invalidIndex) {
-    std::cout << "invalid CPU-index argument. teminating."
-              << "\n";
+    std::cout << "invalid CPU-index argument. teminating." << "\n";
     std::terminate();
   }
 
-  // set up affinity for enqueueing thread
+  // set up affinity for dequeueing thread
   cpu_set_t cpuSet;
   CPU_ZERO(&cpuSet);
   CPU_SET(deqCoreIndex, &cpuSet);
-  int setAffRet =
-      pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuSet);
+  int setAffRet = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuSet);
   if (setAffRet != 0) {
     std::cout
         << "setting up CPU-affinity to dequeueing thread failed. teminating."
         << "\n";
     std::terminate();
   }
-
+	int nMsgs(FileToTuples::fileToTuples<lineTuple>(csvPath).size());
+	
   // give entire cacheline to end-of-buffer flag to avoid false sharing
   alignas(64) std::atomic_flag endOfBuffer{false};
   std::atomic_flag signalFlag{false};
-  timePoint startTime;
+  std::vector<timePoint> startTimes(nMsgs);
 
   // set up objects/variables to dequeueing messages and inserting them into
   // order book
   alignas(64) auto book = ordBook(7000);
   seqLockQueue slq;
+  std::vector<timePoint> completionTimes(nMsgs);
   std::optional<msgClassVar> deqRet;
 
   // launch enqueueing thread
   std::thread enqThread(enqueueLogic, &slq, csvPath, &endOfBuffer, enqCoreIndex,
-                        &signalFlag, &startTime);
-  // enqueueLogic(&slq, csvPath, &endOfBuffer, enqCoreIndex, &signalFlag,
-  // &startTime);
+                        &signalFlag, &startTimes);
 
   while (!signalFlag.test()) {
   };
+  int index{0};
   signalFlag.clear();
 
   // dequeue messages and insert them into order book
@@ -135,26 +132,35 @@ int main(int argc, char* argv[]) {
     deqRet = slq.dequeue();
     if (deqRet.has_value()) {
       book.processOrder(deqRet.value());
+      completionTimes[index] = std::chrono::high_resolution_clock::now();
+	  ++index;
     };
 
   } while (
       !(endOfBuffer.test(std::memory_order_acquire) && !deqRet.has_value()));
 
-  // take finishing time
-  auto completionTime = std::chrono::high_resolution_clock::now();
+  enqThread.join();
 
   // use current time as seed for random generator, generate random index
   std::srand(std::time(nullptr));
   int randomPrice = 7000 + (std::rand() % 6000);
-  
-  enqThread.join();
 
   // query volume at random index to prohibit compiler from optimizing away the
   // program logic
   std::cout << "volume at randomly generated price " << randomPrice << ": " 
      << book.volumeAtPrice(randomPrice) << "\n";
 
-  std::cout << "execution took " << 
-     duration_cast<std::chrono::microseconds>(completionTime - startTime).count() << 
-     " microseconds" << "\n";
+   //compute latencies
+   std::vector<double> latencies(nMsgs);
+   for(int i = 0; i < nMsgs; ++i){
+      latencies[i] = static_cast<double>(duration_cast<std::chrono::nanoseconds>(completionTimes[i] - startTimes[i]).count());
+   }
+   
+   //export latencies to csv
+   {
+	 std::ofstream csv("latencies_CPU_aff.csv");
+	 for (auto&& elem : latencies){
+		 csv << elem << "\n";
+	 }
+}
 }

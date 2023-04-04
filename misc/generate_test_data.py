@@ -12,8 +12,8 @@ while(rand_walk.min() < 10):
     
 #make pandas series for all columns
 order_type_series = pd.Series(np.random.randint(3, size=1000000))
-order_volume_series = pd.Series(np.random.randint(low=-100000, high=100000, size=1000000))
-order_price_series_erratic = pd.Series(np.random.randint(low=7000, high=13000, size = 1000000))
+order_volume_series = pd.Series(np.random.randint(low=-3000, high=3000, size=1000000))
+order_price_series_erratic = pd.Series(np.random.randint(low=7000, high=13000, size=1000000))
 order_price_series_rw = pd.Series(rand_walk)
 
 order_price_series_rw.plot()
@@ -34,6 +34,6 @@ frame_dict_rw = {
 csv_frame_erratic = pd.DataFrame(frame_dict_erratic)
 csv_frame_rw = pd.DataFrame(frame_dict_rw)
 
-#generare CSVs
+#generate CSVs
 csv_frame_erratic.to_csv('RandTestDataErratic.csv', header=False, index=False)
 csv_frame_rw.to_csv('RandTestDataRW.csv', header=False, index=False)

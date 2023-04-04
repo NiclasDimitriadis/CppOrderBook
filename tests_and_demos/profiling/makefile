@@ -1,7 +1,7 @@
 CXX = g++
-COMPILER_FLAGS = -std=c++23 -O3 -g
+COMPILER_FLAGS = -std=c++23 -O3
 INCLUDE_DIRS = -I ../../src/production -I ../../src/testing
-UNITS = Profiling_multithreaded Profiling_CPU_aff
+UNITS = Profiling_multithreaded Profiling_CPU_aff Profiling_single_threaded
 OBJ_FILES = $(addprefix build/,$(addsuffix .o,$(UNITS)))
 EXECUTABLES = $(addprefix build/,$(UNITS))
 
@@ -17,4 +17,4 @@ build/%: build/%.o
 .PHONY: clean all
 
 clean:
-	rm -rf build/*.o build/Profiling_multithreaded build/Profiling_CPU_aff
+	rm -rf build/*.o $(EXECUTABLES)
