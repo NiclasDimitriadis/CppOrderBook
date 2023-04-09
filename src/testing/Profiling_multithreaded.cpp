@@ -14,6 +14,7 @@
 #include <variant>
 #include <vector>
 
+#include "busyWait.hpp"
 #include "FIXSocketHandler.hpp"
 #include "FIXmockSocket.hpp"
 #include "FIXmsgClasses.hpp"
@@ -32,7 +33,7 @@ using seqLockQueue = SeqLockQueue::seqLockQueue<msgClassVar, twoPow20, false>;
 using sockHandler =
     FIXSocketHandler::fixSocketHandler<msgClassVar,
                                        FIXmockSocket::fixMockSocket>;
-using timePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
+using timePoint = decltype(std::chrono::high_resolution_clock::now());
 
 FIXmockSocket::fixMockSocket createMockSocket(const std::string& csvPath,
                                               std::atomic_flag* flagPtr) {
@@ -41,9 +42,24 @@ FIXmockSocket::fixMockSocket createMockSocket(const std::string& csvPath,
 }
 
 void enqueueLogic(seqLockQueue* queuePtr, const std::string& csvPath,
-                  std::atomic_flag* endOfBufferFlag,
+                  std::atomic_flag* endOfBufferFlag, int coreIndex,
                   std::atomic_flag* signalFlag,
-                  timePoint* startTimePtr) noexcept {
+                  std::vector<timePoint>* startTimes) noexcept {
+  // set up CPU-affinity for enqueueing thread
+  if (coreIndex > -1){
+  cpu_set_t cpuSet;
+  CPU_ZERO(&cpuSet);
+  CPU_SET(coreIndex, &cpuSet);
+  int setAffRet =
+      pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuSet);
+  if (setAffRet != 0) {
+    std::cout
+        << "setting up CPU-affinity to enqueueing thread failed. teminating."
+        << "\n";
+    std::terminate();
+  }
+  }
+  
   // set up objects for reading messages
   auto mockSock = createMockSocket(csvPath, endOfBufferFlag);
   auto sHandler = sockHandler(&mockSock);
@@ -54,59 +70,85 @@ void enqueueLogic(seqLockQueue* queuePtr, const std::string& csvPath,
   while (signalFlag->test()) {
   };
 
-  // take start time
-  auto startTime = std::chrono::high_resolution_clock::now();
-
-  // read all messages for socket and enqueue them to be processed by other
-  // thread
+  // read all messages for socket and enqueue them to be processed by other thread
+  //auto sinceEp = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+  int index{0};
+  timePoint startTime;
+  
   while (!endOfBufferFlag->test(std::memory_order_acquire)) {
+	startTime = std::chrono::high_resolution_clock::now();
     readRet = sHandler.readNextMessage();
-    if (readRet.has_value()) {
-      queuePtr->enqueue(readRet.value());
-    };
+	queuePtr->enqueue(readRet.value());
+	(*startTimes)[index] = startTime;
+	++index;
+	BusyWait::busyWait(50);
   }
-
-  //"return" start time
-  *startTimePtr = startTime;
 }
 
 int main(int argc, char* argv[]) {
-  // process path argumement
-  std::string csvPath(argv[1]);
+   // process and validate command line arguments
+   std::string csvPath(argv[1]);
+   int enqCoreIndex = -1;
+   int deqCoreIndex = -1;
+   if (argc == 4){
+		  int nCores = std::thread::hardware_concurrency();
+		  enqCoreIndex = std::atoi(argv[2]);
+		  deqCoreIndex = std::atoi(argv[3]);
+		  bool invalidIndex = enqCoreIndex < 0 || enqCoreIndex > nCores ||
+							  deqCoreIndex < 0 || deqCoreIndex > nCores;
+		  if (invalidIndex) {
+			std::cout << "invalid CPU-index argument. teminating." << "\n";
+			std::terminate();
+		  }
 
+		  // set up affinity for dequeueing thread
+		  cpu_set_t cpuSet;
+		  CPU_ZERO(&cpuSet);
+		  CPU_SET(deqCoreIndex, &cpuSet);
+		  int setAffRet = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuSet);
+		  if (setAffRet != 0) {
+			std::cout
+				<< "setting up CPU-affinity to dequeueing thread failed. teminating."
+				<< "\n";
+			std::terminate();
+  }
+  }
+	int nMsgs(FileToTuples::fileToTuples<lineTuple>(csvPath).size());
+	
   // give entire cacheline to end-of-buffer flag to avoid false sharing
   alignas(64) std::atomic_flag endOfBuffer{false};
   std::atomic_flag signalFlag{false};
-  timePoint startTime;
+  std::vector<timePoint> startTimes(nMsgs);
 
   // set up objects/variables to dequeueing messages and inserting them into
   // order book
   alignas(64) auto book = ordBook(7000);
   seqLockQueue slq;
+  std::vector<timePoint> completionTimes(nMsgs);
   std::optional<msgClassVar> deqRet;
 
   // launch enqueueing thread
-  std::thread enqThread(enqueueLogic, &slq, csvPath, &endOfBuffer, &signalFlag,
-                        &startTime);
-  // enqueueLogic(&slq, csvPath, &endOfBuffer, enqCoreIndex, &signalFlag,
-  // &startTime);
+  std::thread enqThread(enqueueLogic, &slq, csvPath, &endOfBuffer, enqCoreIndex,
+                        &signalFlag, &startTimes);
 
   while (!signalFlag.test()) {
   };
+  int index{0};
   signalFlag.clear();
-
+  timePoint completionTime;
+  
   // dequeue messages and insert them into order book
   do {
     deqRet = slq.dequeue();
     if (deqRet.has_value()) {
       book.processOrder(deqRet.value());
+	  completionTime = std::chrono::high_resolution_clock::now();
+	  completionTimes[index] = completionTime;
+	  ++index;
     };
   } while (
       !(endOfBuffer.test(std::memory_order_acquire) && !deqRet.has_value()));
-
-  // take finishing time
-  auto completionTime = std::chrono::high_resolution_clock::now();
-
+  
   enqThread.join();
 
   // use current time as seed for random generator, generate random index
@@ -118,10 +160,17 @@ int main(int argc, char* argv[]) {
   std::cout << "volume at randomly generated price " << randomPrice << ": " 
      << book.volumeAtPrice(randomPrice) << "\n";
 
-  std::cout << "execution took " << 
-     duration_cast<std::chrono::microseconds>(completionTime - startTime).count() << 
-     " microseconds" << "\n";
-
-
-  return 0;
+   //compute latencies
+   std::vector<double> latencies(nMsgs);
+   for(int i = 0; i < nMsgs; ++i){
+      latencies[i] = static_cast<double>(duration_cast<std::chrono::nanoseconds>(completionTimes[i] - startTimes[i]).count());
+   }
+   
+   //export latencies to csv
+   {
+	 std::ofstream csv("latencies_multithreaded.csv");
+	 for (auto&& elem : latencies){
+		 csv << elem << "\n";
+	 }
+}
 }

@@ -6,6 +6,7 @@
 #include <concepts>
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
 #include <optional>
 #include <span>
 #include <type_traits>
@@ -70,6 +71,7 @@ SEQ_LOCK_QUEUE::seqLockQueue()
   this->enqueueSpan = std::span<elementType, length>(
       reinterpret_cast<elementType*>(this->memoryPointer), length);
   std::ranges::fill(this->dequeueSpan, elementType());
+  //std::cout << "byte length = " << byteLength << "\n";
 };
 
 TEMPLATE_PARAMS

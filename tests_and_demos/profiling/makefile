@@ -1,10 +1,9 @@
 CXX = g++
 COMPILER_FLAGS = -std=c++23 -O3
 INCLUDE_DIRS = -I ../../src/production -I ../../src/testing
-UNITS = Profiling_multithreaded Profiling_CPU_aff Profiling_single_threaded
-OBJ_FILES = $(addprefix build/,$(addsuffix .o,$(UNITS)))
+UNITS = Profiling_multithreaded Profiling_single_threaded
 EXECUTABLES = $(addprefix build/,$(UNITS))
-
+OBJ_FILES = $(addsuffix .o,$(EXECUTABLES))
 
 all: $(OBJ_FILES) $(EXECUTABLES)
 

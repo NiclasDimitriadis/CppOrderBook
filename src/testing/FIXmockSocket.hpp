@@ -175,18 +175,18 @@ fixMockSocket::fixMockSocket(
 
 fixMockSocket::~fixMockSocket() { delete[] this->memPtr; };
 
-std::int32_t fixMockSocket::recv(void* dest, std::uint32_t count) noexcept {
-  if ((this->readIndex + count) > this->memSize) {
+std::int32_t fixMockSocket::recv(void* dest, std::uint32_t  len) noexcept {
+  if ((this->readIndex + len) > this->memSize) {
     std::cout << "fixMockSocket: out of bounds read during call of recv(). "
                  "terminating."
               << "\n";
     std::terminate();
   };
-  std::memcpy(dest, &this->memSpan[this->readIndex], count);
-  this->readIndex += count;
+  std::memcpy(dest, &this->memSpan[this->readIndex], len);
+  this->readIndex += len;
   if (this->readIndex == this->memSize && this->endOfBuffer != nullptr) {
     this->endOfBuffer->test_and_set(std::memory_order_release);
   };
-  return count;
+  return len;
 };
 }  // namespace FIXmockSocket

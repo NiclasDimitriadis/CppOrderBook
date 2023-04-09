@@ -28,7 +28,69 @@ Special emphasis was put on techniques enabling low-latency. Those include:
  - memory-aligning objects in accordance with a 64-byte cacheline
  - ensuring fast multithreaded access to components that support concurrency, namely the seqlock-queue which enables wait-free enqueueing and lock-free dequeueing and the order book which supports lock-free reads via a seqlock as well (a lock is used required for manipulating book entries though) 
  
+---
 
+#### performance:
+###### cachegring:	
+ - the result of a cachegrind run can be found in the `misc` directory
+ - results indicate negligible rates of cache misses and branch mispredictions with the possible exception of indirection braches
+
+###### empirical latencies:
+ - generated on Intel Core i5-1135G7
+ - generated running on both one and two threads and dedicated pysical cores (see section on profiling for more details)
+ - findings: 
+   -  regularly recurring spikes in latency by 1 or 2 orders of magnitude for unknown reasons
+   -  when using the seq-lock queue, spikes seem to occur at an interval of roughly 2mb
+   -  this quantity does not appear to coincide with the size of any cache level (or TLB with 4096kb memory pages)
+   -  context switches seem an unlikely explanation as test runs were assigned isolated physical cores  
+ - results for single-threaded run (in nanoseconds, n = 1000000):
+   -  mean: 81.4
+   -  standard deviation: 20.4
+   -  max: 3684
+   -  0.99 quantile: 126
+   -  # of outcomes > 1 microsecond: 26
+ - results for multithreaded run (in nanoseconds,  n = 1000000):
+   -  mean: 182.1
+   -  standard deviation: 65.4
+   -  max: 12125
+   -  0.99 quantile: 340
+   -  # of outcomes > 1 microsecond: 218
+
+---
+
+#### unit-tests and profiling:
+##### dedicated components:
+the components listed below have the sole purpose of enabling unit testing and/or profiling 
+
+###### FIXmockSocket::fixMockSocket
+ - mimics the behaviour of a user-space networking stack with a POSIX-socket like interface
+ - dispenses FIX messages as they might come in via network
+ - `std::int32_t fixMockSocket::recv(void* dest, std::uint32_t len)` represents a blocking call
+   of `recv` on a POSIX socket, copying `len` bytes to `dest`
+ - fixMockSocket is constructed from `std::vector<std::tuple<std::uint8_t, std::int32_t, std::uint32_t>>`
+ - each `std::tuple` represents a single FIX message with its entries representing the message's type, volume and price respectively
+
+###### `template <typename LineTuple> std::vector<LineTuple> fileToTuples(const std::string& filePath, char delimiter = ',')`
+ - reads lines from a file (comma seperated by default) to create a vector of tuples
+ - mock socket can then be constructed from the resulting vector
+
+##### unit tests:
+ - build using `CppOrderBook/tests_and_demos/unittests/makefile`
+ - must be run from `CppOrderBook/tests_and_demos/unittests` directory as that's where the CSVs with test data located
+ - `RandTestDataErratic.csv` can be reproduced by running `CppOrderBook/misc/generate_test_data.py` 
+
+##### profiling:
+ - build using `CppOrderBook/tests_and_demos/profiling/makefile`
+ - builds executables `profiling_single_threaded` and `profiling_multithreaded`
+ - both executables read FIX messages from a mock socket, construct message objects and insert messages into an order book
+ - `profiling_multithreaded` hands message off to be inserted by a second thread via `SeqLockQueue::seqLockQueue`
+ - both executables require the path to a CSV file with test data as first command line argument
+ - to achieve CPU-affinity, give index of the core (or indices of two cores for `profiling_multithreaded`)
+   you wish the executable to run on as additonal command line arguments
+ - both executables print out the volume contained in the order book at a random index to prevent the compiler from optimizing away the logic 
+ - both executables generate a CSV cotaining the latency (time between starting read from socket and completing processing by order book)
+   for every single message that was processed 
+ - results of cachegring run can be found in `misc` directory
 ---
 
 #### components:
@@ -113,9 +175,9 @@ struct seqLockElement`
 #### FIXmsgClasses:
 ##### description:
 - three classes representint different types of orders/messages for the order book:
-   -  adding liquidity
+  -  adding liquidity
   -  withdrawing liquidity added previously
-  - filling a market order
+  -  filling a market order
 - all classes contain static data specifying the byte layout of incoming messages to be used by the socketHandler class
 - all classes can be constructed from a std::span of 8-bit integers(for use by socketHandler), default constructed without arguments or constructed from arguments representing their respective  non-static members (volume and possibly price)
 
