@@ -48,13 +48,13 @@ Special emphasis was put on techniques enabling low-latency. Those include:
    -  standard deviation: 20.4
    -  max: 3684
    -  0.99 quantile: 126
-   -  # of outcomes > 1 microsecond: 26
+   -  number of outcomes > 1 microsecond: 26
  - results for multithreaded run (in nanoseconds,  n = 1000000):
    -  mean: 182.1
    -  standard deviation: 65.4
    -  max: 12125
    -  0.99 quantile: 340
-   -  # of outcomes > 1 microsecond: 218
+   -  number of outcomes > 1 microsecond: 218
 
 ---
 
