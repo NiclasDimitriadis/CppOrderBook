@@ -95,7 +95,6 @@ bool is_negative(Sint sint) {
     return (std::make_unsigned_t<Sint>)sint << shift_by == 1;
 }
 
-
 // concept to enforce a socket wrapper can be called essentially like a POSIX
 // socket, via a recv-method
 template <typename socketType>

@@ -1,7 +1,6 @@
-#define DOCTEST_CONFIG_IMPLEMENT 
+#define DOCTEST_CONFIG_IMPLEMENT
 
 #include "Unittest_Includes.hpp"
-
 
 TEST_CASE("testing FileToTuples::fileToTuples") {
   using lineTuple = std::tuple<std::uint8_t, std::int32_t, std::uint32_t>;
@@ -13,8 +12,7 @@ TEST_CASE("testing FileToTuples::fileToTuples") {
   CHECK(std::get<2>(msgTuples[2]) == 333);
 }
 
-
 int main() {
   doctest::Context context;
   context.run();
-} 
+}

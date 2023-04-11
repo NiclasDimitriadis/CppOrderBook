@@ -1,5 +1,5 @@
 CXX = g++
-COMPILER_FLAGS = -std=c++23 -O3
+COMPILER_FLAGS = -std=c++23 -O3 -pg
 INCLUDE_DIRS = -I ../../src/production -I ../../src/testing
 UNITS = Profiling_multithreaded Profiling_single_threaded
 EXECUTABLES = $(addprefix build/,$(UNITS))

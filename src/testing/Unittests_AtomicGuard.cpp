@@ -1,7 +1,6 @@
-#define DOCTEST_CONFIG_IMPLEMENT 
+#define DOCTEST_CONFIG_IMPLEMENT
 
 #include "Unittest_Includes.hpp"
-
 
 TEST_CASE("testing AtomicGuards::AtomicFlagGuard") {
   std::atomic_flag testFlag{false};
@@ -49,8 +48,7 @@ TEST_CASE("testing AtomicGuards::AtomicFlagGuard") {
   }
 }
 
-
 int main() {
   doctest::Context context;
   context.run();
-} 
+}

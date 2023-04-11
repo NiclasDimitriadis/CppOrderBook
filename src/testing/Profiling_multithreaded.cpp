@@ -14,13 +14,13 @@
 #include <variant>
 #include <vector>
 
-#include "busyWait.hpp"
 #include "FIXSocketHandler.hpp"
 #include "FIXmockSocket.hpp"
 #include "FIXmsgClasses.hpp"
 #include "FileToTuples.hpp"
 #include "OrderBook.hpp"
 #include "SeqLockQueue.hpp"
+#include "busyWait.hpp"
 
 using lineTuple = std::tuple<std::uint8_t, std::int32_t, std::uint32_t>;
 using msgClassVar =
@@ -46,20 +46,20 @@ void enqueueLogic(seqLockQueue* queuePtr, const std::string& csvPath,
                   std::atomic_flag* signalFlag,
                   std::vector<timePoint>* startTimes) noexcept {
   // set up CPU-affinity for enqueueing thread
-  if (coreIndex > -1){
-  cpu_set_t cpuSet;
-  CPU_ZERO(&cpuSet);
-  CPU_SET(coreIndex, &cpuSet);
-  int setAffRet =
-      pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuSet);
-  if (setAffRet != 0) {
-    std::cout
-        << "setting up CPU-affinity to enqueueing thread failed. teminating."
-        << "\n";
-    std::terminate();
+  if (coreIndex > -1) {
+    cpu_set_t cpuSet;
+    CPU_ZERO(&cpuSet);
+    CPU_SET(coreIndex, &cpuSet);
+    int setAffRet =
+        pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuSet);
+    if (setAffRet != 0) {
+      std::cout
+          << "setting up CPU-affinity to enqueueing thread failed. teminating."
+          << "\n";
+      std::terminate();
+    }
   }
-  }
-  
+
   // set up objects for reading messages
   auto mockSock = createMockSocket(csvPath, endOfBufferFlag);
   auto sHandler = sockHandler(&mockSock);
@@ -70,51 +70,55 @@ void enqueueLogic(seqLockQueue* queuePtr, const std::string& csvPath,
   while (signalFlag->test()) {
   };
 
-  // read all messages for socket and enqueue them to be processed by other thread
-  //auto sinceEp = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+  // read all messages for socket and enqueue them to be processed by other
+  // thread
+  // auto sinceEp =
+  // std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
   int index{0};
   timePoint startTime;
-  
+
   while (!endOfBufferFlag->test(std::memory_order_acquire)) {
-	startTime = std::chrono::high_resolution_clock::now();
+    startTime = std::chrono::high_resolution_clock::now();
     readRet = sHandler.readNextMessage();
-	queuePtr->enqueue(readRet.value());
-	(*startTimes)[index] = startTime;
-	++index;
-	BusyWait::busyWait(50);
+    queuePtr->enqueue(readRet.value());
+    (*startTimes)[index] = startTime;
+    ++index;
+    BusyWait::busyWait(50);
   }
 }
 
 int main(int argc, char* argv[]) {
-   // process and validate command line arguments
-   std::string csvPath(argv[1]);
-   int enqCoreIndex = -1;
-   int deqCoreIndex = -1;
-   if (argc == 4){
-		  int nCores = std::thread::hardware_concurrency();
-		  enqCoreIndex = std::atoi(argv[2]);
-		  deqCoreIndex = std::atoi(argv[3]);
-		  bool invalidIndex = enqCoreIndex < 0 || enqCoreIndex > nCores ||
-							  deqCoreIndex < 0 || deqCoreIndex > nCores;
-		  if (invalidIndex) {
-			std::cout << "invalid CPU-index argument. teminating." << "\n";
-			std::terminate();
-		  }
+  // process and validate command line arguments
+  std::string csvPath(argv[1]);
+  int enqCoreIndex = -1;
+  int deqCoreIndex = -1;
+  if (argc == 4) {
+    int nCores = std::thread::hardware_concurrency();
+    enqCoreIndex = std::atoi(argv[2]);
+    deqCoreIndex = std::atoi(argv[3]);
+    bool invalidIndex = enqCoreIndex < 0 || enqCoreIndex > nCores ||
+                        deqCoreIndex < 0 || deqCoreIndex > nCores;
+    if (invalidIndex) {
+      std::cout << "invalid CPU-index argument. teminating."
+                << "\n";
+      std::terminate();
+    }
 
-		  // set up affinity for dequeueing thread
-		  cpu_set_t cpuSet;
-		  CPU_ZERO(&cpuSet);
-		  CPU_SET(deqCoreIndex, &cpuSet);
-		  int setAffRet = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuSet);
-		  if (setAffRet != 0) {
-			std::cout
-				<< "setting up CPU-affinity to dequeueing thread failed. teminating."
-				<< "\n";
-			std::terminate();
+    // set up affinity for dequeueing thread
+    cpu_set_t cpuSet;
+    CPU_ZERO(&cpuSet);
+    CPU_SET(deqCoreIndex, &cpuSet);
+    int setAffRet =
+        pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuSet);
+    if (setAffRet != 0) {
+      std::cout
+          << "setting up CPU-affinity to dequeueing thread failed. teminating."
+          << "\n";
+      std::terminate();
+    }
   }
-  }
-	int nMsgs(FileToTuples::fileToTuples<lineTuple>(csvPath).size());
-	
+  int nMsgs(FileToTuples::fileToTuples<lineTuple>(csvPath).size());
+
   // give entire cacheline to end-of-buffer flag to avoid false sharing
   alignas(64) std::atomic_flag endOfBuffer{false};
   std::atomic_flag signalFlag{false};
@@ -136,19 +140,19 @@ int main(int argc, char* argv[]) {
   int index{0};
   signalFlag.clear();
   timePoint completionTime;
-  
+
   // dequeue messages and insert them into order book
   do {
     deqRet = slq.dequeue();
     if (deqRet.has_value()) {
       book.processOrder(deqRet.value());
-	  completionTime = std::chrono::high_resolution_clock::now();
-	  completionTimes[index] = completionTime;
-	  ++index;
+      completionTime = std::chrono::high_resolution_clock::now();
+      completionTimes[index] = completionTime;
+      ++index;
     };
   } while (
       !(endOfBuffer.test(std::memory_order_acquire) && !deqRet.has_value()));
-  
+
   enqThread.join();
 
   // use current time as seed for random generator, generate random index
@@ -157,20 +161,22 @@ int main(int argc, char* argv[]) {
 
   // query volume at random index to prohibit compiler from optimizing away the
   // program logic
-  std::cout << "volume at randomly generated price " << randomPrice << ": " 
-     << book.volumeAtPrice(randomPrice) << "\n";
+  std::cout << "volume at randomly generated price " << randomPrice << ": "
+            << book.volumeAtPrice(randomPrice) << "\n";
 
-   //compute latencies
-   std::vector<double> latencies(nMsgs);
-   for(int i = 0; i < nMsgs; ++i){
-      latencies[i] = static_cast<double>(duration_cast<std::chrono::nanoseconds>(completionTimes[i] - startTimes[i]).count());
-   }
-   
-   //export latencies to csv
-   {
-	 std::ofstream csv("latencies_multithreaded.csv");
-	 for (auto&& elem : latencies){
-		 csv << elem << "\n";
-	 }
-}
+  // compute latencies
+  std::vector<double> latencies(nMsgs);
+  for (int i = 0; i < nMsgs; ++i) {
+    latencies[i] = static_cast<double>(duration_cast<std::chrono::nanoseconds>(
+                                           completionTimes[i] - startTimes[i])
+                                           .count());
+  }
+
+  // export latencies to csv
+  {
+    std::ofstream csv("latencies_multithreaded.csv");
+    for (auto&& elem : latencies) {
+      csv << elem << "\n";
+    }
+  }
 }

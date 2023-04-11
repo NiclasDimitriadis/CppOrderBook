@@ -1,7 +1,6 @@
-#define DOCTEST_CONFIG_IMPLEMENT 
+#define DOCTEST_CONFIG_IMPLEMENT
 
 #include "Unittest_Includes.hpp"
-
 
 TEST_CASE("testing Auxil::pow_two_ceil") {
   CHECK(Auxil::pow_two_ceil<std::uint32_t>(0) == 1);
@@ -44,7 +43,6 @@ TEST_CASE("testing Auxil::validate_tuple") {
   CHECK(Auxil::check_parameter_pack<std::is_arithmetic, int, float, double,
                                     std::string>::value == false);
 }
-
 
 int main() {
   doctest::Context context;

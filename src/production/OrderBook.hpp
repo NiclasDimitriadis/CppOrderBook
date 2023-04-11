@@ -30,8 +30,7 @@ requires std::signed_integral<entryType_> &&
         msgClassVariant_, newLimitOrderIndex_,
         withdrawLimitOrderIndex_>::value &&
     MsgTypeChecks::OrderBookMarketOrderInterface<
-        msgClassVariant_, marketOrderIndex_>::value
- struct orderBook {
+        msgClassVariant_, marketOrderIndex_>::value struct orderBook {
  private:
   // static members and member types
   static constexpr size_t cacheline = 64;
@@ -66,15 +65,16 @@ requires std::signed_integral<entryType_> &&
 
   // private member functions
   bool priceInRange(std::uint32_t) noexcept;
-  //searches for closest buckets containing non-zero volume
-  //to be used when updating stats
+  // searches for closest buckets containing non-zero volume
+  // to be used when updating stats
   __attribute__((flatten)) std::optional<std::uint32_t> findLiquidBucket(
       std::uint32_t, std::int32_t) noexcept;
   __attribute__((flatten))
-  //iterates over portion of the order book to withdraw liquidity/ fill volume
-  //to be used for market orders and limit orders that can be filled immediately
+  // iterates over portion of the order book to withdraw liquidity/ fill volume
+  // to be used for market orders and limit orders that can be filled
+  // immediately
   orderResponse runThroughBook(entryType_, std::int32_t) noexcept;
-  //inserts limt order, fills limt order if possible
+  // inserts limt order, fills limt order if possible
   __attribute__((flatten)) orderResponse handleNewLimitOrder(
       const newLimitOrderClass&) noexcept;
   __attribute__((flatten)) orderResponse handleWithdrawLimitOrder(
@@ -123,11 +123,12 @@ requires std::signed_integral<entryType_> &&
       MsgTypeChecks::OrderBookMarketOrderInterface<msgClassVariant_,     \
                                                    marketOrderIndex_>::value
 
-#define ORDER_BOOK                                                          \
-  OrderBook::orderBook<msgClassVariant_, entryType_, bookLength_, exclusiveCacheline_, \
-            newLimitOrderIndex_, withdrawLimitOrderIndex_, marketOrderIndex_>
+#define ORDER_BOOK                                                \
+  OrderBook::orderBook<msgClassVariant_, entryType_, bookLength_, \
+                       exclusiveCacheline_, newLimitOrderIndex_,  \
+                       withdrawLimitOrderIndex_, marketOrderIndex_>
 
-//namespace OrderBook {
+// namespace OrderBook {
 
 ORDER_BOOK_TEMPLATE_DECLARATION
 ORDER_BOOK::orderBook(std::uint32_t basePrice_) : basePrice{basePrice_} {
@@ -147,39 +148,39 @@ ORDER_BOOK::~orderBook() {
   std::free(this->memoryPointer);
 };
 
-
 ORDER_BOOK_TEMPLATE_DECLARATION
 typename ORDER_BOOK::orderResponse ORDER_BOOK::processOrder(
     msgClassVariant order) noexcept {
   const std::uint8_t index = order.index();
-  
-  //create tuple of blank orders for each type and insert the order to be processed in correct spot
+
+  // create tuple of blank orders for each type and insert the order to be
+  // processed in correct spot
   auto orders =
       orderClassTuple{newLimitOrderClass(0, 0), withdrawLimitOrderClass(0, 0),
                       marketOrderClass(0)};
   std::get<0>(orders) = index == 0 ? std::get<0>(order) : std::get<0>(orders);
   std::get<1>(orders) = index == 1 ? std::get<1>(order) : std::get<1>(orders);
   std::get<2>(orders) = index == 2 ? std::get<2>(order) : std::get<2>(orders);
-  
-  // acquire write access to order book, set version counter to odd value to invlaidate reads while order book is manipulated
+
+  // acquire write access to order book, set version counter to odd value to
+  // invlaidate reads while order book is manipulated
   auto guard = AtomicGuards::AtomicFlagGuard(&this->modifyLock);
   guard.lock();
   ++this->versionCounter;
   std::atomic_signal_fence(std::memory_order_acq_rel);
-  
+
   // call handler for all order types, use blank orders for irrelevant types
   auto ret = this->handleNewLimitOrder(std::get<0>(orders));
   Auxil::add_to_tuple(ret, this->handleWithdrawLimitOrder(std::get<1>(orders)));
   Auxil::add_to_tuple(ret, this->handleMarketOrder(std::get<2>(orders)));
-  
-  //release lock, set increment counter to even value
+
+  // release lock, set increment counter to even value
   std::atomic_signal_fence(std::memory_order_acq_rel);
   ++this->versionCounter;
   guard.unlock();
 
   return ret;
 };
-
 
 ORDER_BOOK_TEMPLATE_DECLARATION
 std::tuple<std::optional<std::uint32_t>, std::optional<std::uint32_t>>
@@ -349,15 +350,16 @@ ORDER_BOOK_TEMPLATE_DECLARATION
 typename ORDER_BOOK::orderResponse ORDER_BOOK::handleNewLimitOrder(
     const newLimitOrderClass& order) noexcept {
   std::uint32_t price = order.orderPrice;
-  
+
   // check if price is out of range, if so set order volume to 0
-  // and price to base price to avoid out of bounds memory access, then proceed regularly
+  // and price to base price to avoid out of bounds memory access, then proceed
+  // regularly
   const bool priceInRange = order.orderVolume == 0 || this->priceInRange(price);
   price = price * priceInRange + this->basePrice * !priceInRange;
   const std::int32_t volume = order.orderVolume * priceInRange;
   const bool dummyOrder = volume == 0;
   const bool buyOrder = volume < 0;
-  
+
   // fill order volume immediately if possible
   const bool crossedBook =
       !dummyOrder * ((buyOrder && this->bestOffer.has_value() &&
@@ -368,12 +370,12 @@ typename ORDER_BOOK::orderResponse ORDER_BOOK::handleNewLimitOrder(
   const std::int32_t runEndPrice =
       !crossedBook * (-1) +
       crossedBook * (buyOrder * this->highestOffer.value_or(-1) +
-                  !buyOrder * this->lowestBid.value_or(-1));
+                     !buyOrder * this->lowestBid.value_or(-1));
   ret = this->runThroughBook(volume, runEndPrice);
-  
+
   // insert error code if price is out of range
   std::get<3>(ret) += 1 * !priceInRange;
-  
+
   // enter liquidity into order book
   const entryType unfilledVol = volume - std::get<1>(ret);
   const bool liqAdded = unfilledVol != 0;
@@ -410,7 +412,7 @@ ORDER_BOOK_TEMPLATE_DECLARATION
 typename ORDER_BOOK::orderResponse ORDER_BOOK::handleWithdrawLimitOrder(
     const withdrawLimitOrderClass& order) noexcept {
   std::uint32_t price = order.orderPrice;
-  
+
   // check if price is out of range, if so set order volume to 0 but proceed
   // set priceInRange to true for volume == 0 to avoid error code in order
   // response for default/dummy withdraw messages
@@ -419,14 +421,14 @@ typename ORDER_BOOK::orderResponse ORDER_BOOK::handleWithdrawLimitOrder(
   price = price * priceInRange + this->basePrice * !priceInRange;
   const std::int32_t volume = order.orderVolume * priceInRange;
   const bool withdrawSupply = volume > 0;
-  
-  //perform actual withdrawel
+
+  // perform actual withdrawel
   const std::int32_t volumeWithdrawn =
       hasVolume
           ? this->memSpan[price - this->basePrice].consumeLiquidity(volume)
           : 0;
-  
-  //upate stats if necessary
+
+  // upate stats if necessary
   const bool liquidityExhausted =
       !hasVolume || this->memSpan[price - this->basePrice].getVolume() == 0;
   this->bestBid = this->bestBid.and_then([&](std::uint32_t arg) {
@@ -452,7 +454,6 @@ typename ORDER_BOOK::orderResponse ORDER_BOOK::handleWithdrawLimitOrder(
   return orderResponse{0, volumeWithdrawn, 0, 1 * !priceInRange};
 };
 
-
 ORDER_BOOK_TEMPLATE_DECLARATION
 typename ORDER_BOOK::orderResponse ORDER_BOOK::handleMarketOrder(
     const marketOrderClass& order) noexcept {
@@ -462,7 +463,6 @@ typename ORDER_BOOK::orderResponse ORDER_BOOK::handleMarketOrder(
       (volume > 0) * (this->lowestBid.value_or(-1));
   return this->runThroughBook(order.orderVolume, runEndPrice);
 };
-
 
 ORDER_BOOK_TEMPLATE_DECLARATION
 std::uint64_t ORDER_BOOK::__invariantsCheck(int nIt) const {
@@ -558,7 +558,7 @@ std::uint64_t ORDER_BOOK::__invariantsCheck(int nIt) const {
   return errorCode;
 };
 
-//}  // namespace OrderBook
+  //}  // namespace OrderBook
 
 #undef ORDER_BOOK_TEMPLATE_DECLARATION
 #undef ORDER_BOOK

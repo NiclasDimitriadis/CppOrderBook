@@ -1,7 +1,6 @@
-#define DOCTEST_CONFIG_IMPLEMENT 
+#define DOCTEST_CONFIG_IMPLEMENT
 
 #include "Unittest_Includes.hpp"
-
 
 TEST_CASE("testing FIXmockSocket::fixMockSocket") {
   using lineTuple = std::tuple<std::uint8_t, std::int32_t, std::uint32_t>;
@@ -90,8 +89,7 @@ TEST_CASE("testing FIXmockSocket::fixMockSocket") {
   }
 }
 
-
 int main() {
   doctest::Context context;
   context.run();
-} 
+}

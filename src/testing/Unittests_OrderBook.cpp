@@ -1,7 +1,6 @@
-#define DOCTEST_CONFIG_IMPLEMENT 
+#define DOCTEST_CONFIG_IMPLEMENT
 
 #include "Unittest_Includes.hpp"
-
 
 TEST_CASE("testing OrderBook::orderBook") {
   using msgClassVariant = std::variant<FIXmsgClasses::addLimitOrder,
@@ -252,8 +251,7 @@ TEST_CASE("testing OrderBook::orderBook") {
   }
 }
 
-
 int main() {
   doctest::Context context;
   context.run();
-} 
+}

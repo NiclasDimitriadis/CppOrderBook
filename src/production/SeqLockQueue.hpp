@@ -16,8 +16,7 @@
 
 namespace SeqLockQueue {
 template <typename contentType_, std::uint32_t length_, bool shareCacheline>
-requires(std::has_single_bit(length_))
- struct seqLockQueue {
+requires(std::has_single_bit(length_)) struct seqLockQueue {
  private:
   static constexpr std::uint16_t cacheline = 64;
   static constexpr std::uint32_t length = length_;
@@ -71,7 +70,7 @@ SEQ_LOCK_QUEUE::seqLockQueue()
   this->enqueueSpan = std::span<elementType, length>(
       reinterpret_cast<elementType*>(this->memoryPointer), length);
   std::ranges::fill(this->dequeueSpan, elementType());
-  //std::cout << "byte length = " << byteLength << "\n";
+  // std::cout << "byte length = " << byteLength << "\n";
 };
 
 TEMPLATE_PARAMS

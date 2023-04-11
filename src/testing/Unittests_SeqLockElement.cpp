@@ -1,7 +1,6 @@
-#define DOCTEST_CONFIG_IMPLEMENT 
+#define DOCTEST_CONFIG_IMPLEMENT
 
 #include "Unittest_Includes.hpp"
-
 
 TEST_CASE("testing SeqLockElement::seqLockElement") {
   using testElementClass = SeqLockElement::seqLockElement<int, 8>;
@@ -13,8 +12,7 @@ TEST_CASE("testing SeqLockElement::seqLockElement") {
   CHECK(std::get<1>(readRet) == 2);
 }
 
-
 int main() {
   doctest::Context context;
   context.run();
-} 
+}

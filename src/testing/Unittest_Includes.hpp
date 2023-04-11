@@ -24,4 +24,4 @@
 #include "OrderBookBucket.hpp"
 #include "SeqLockElement.hpp"
 #include "SeqLockQueue.hpp"
-#include "doctest/doctest.h" 
+#include "doctest/doctest.h"

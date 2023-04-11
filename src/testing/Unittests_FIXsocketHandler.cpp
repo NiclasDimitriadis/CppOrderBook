@@ -1,7 +1,6 @@
-#define DOCTEST_CONFIG_IMPLEMENT 
+#define DOCTEST_CONFIG_IMPLEMENT
 
 #include "Unittest_Includes.hpp"
-
 
 TEST_CASE("testing FIXsocketHandler::fixSocketHandler") {
   using msgClassVariant = std::variant<FIXmsgClasses::addLimitOrder,
@@ -77,8 +76,7 @@ TEST_CASE("testing OrderBookBucket::orderBookBucket") {
   CHECK(testBucket.getVolume() == 0);
 }
 
-
 int main() {
   doctest::Context context;
   context.run();
-} 
+}

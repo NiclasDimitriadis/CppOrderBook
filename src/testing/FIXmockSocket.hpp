@@ -175,7 +175,7 @@ fixMockSocket::fixMockSocket(
 
 fixMockSocket::~fixMockSocket() { delete[] this->memPtr; };
 
-std::int32_t fixMockSocket::recv(void* dest, std::uint32_t  len) noexcept {
+std::int32_t fixMockSocket::recv(void* dest, std::uint32_t len) noexcept {
   if ((this->readIndex + len) > this->memSize) {
     std::cout << "fixMockSocket: out of bounds read during call of recv(). "
                  "terminating."

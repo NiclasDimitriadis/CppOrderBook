@@ -39,7 +39,7 @@ void SEQ_LOCK_ELEMENT::insert(contentType_ newContent) noexcept {
 
 TEMPLATE_PARAMS
 std::tuple<std::optional<contentType_>, std::int64_t> SEQ_LOCK_ELEMENT::read(
-  std::int64_t prevVersion) const noexcept {
+    std::int64_t prevVersion) const noexcept {
   std::int64_t initialVersion;
   contentType retContent;
   do {

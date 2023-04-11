@@ -1,7 +1,6 @@
-#define DOCTEST_CONFIG_IMPLEMENT 
+#define DOCTEST_CONFIG_IMPLEMENT
 
 #include "Unittest_Includes.hpp"
-
 
 TEST_CASE("testing SeqLockQueue::seqLockQueue") {
   SUBCASE("testing enqueueing and dequeueing with shared cachline") {
@@ -88,8 +87,7 @@ TEST_CASE("testing SeqLockQueue::seqLockQueue") {
   }
 }
 
-
 int main() {
   doctest::Context context;
   context.run();
-} 
+}

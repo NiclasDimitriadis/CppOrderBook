@@ -25,10 +25,9 @@ template <typename msgClassVariant_, typename socketType_>
 requires Auxil::readableAsSocket<socketType_> &&
     MsgTypeChecks::consistencyChecksAcrossMsgTypes<msgClassVariant_>::value &&
     MsgTypeChecks::alternativesDefaultConstructible<
-        msgClassVariant_>::value
- struct fixSocketHandler {
-	private:
-	//static data about byte layout of FIX messages
+        msgClassVariant_>::value struct fixSocketHandler {
+ private:
+  // static data about byte layout of FIX messages
   static constexpr std::uint32_t delimitOffset =
       std::variant_alternative_t<0, msgClassVariant_>::delimiterOffset;
   static constexpr std::uint16_t delimitValue =
@@ -44,16 +43,16 @@ requires Auxil::readableAsSocket<socketType_> &&
   static constexpr std::uint32_t shortestMsgSize =
       MsgTypeChecks::determineMinMsgLen<msgClassVariant_>::value;
   static_assert(shortestMsgSize > headerLength);
-  //index sequence used to generate static "loop" over message types
+  // index sequence used to generate static "loop" over message types
   static constexpr auto indexSeq =
       std::make_index_sequence<std::variant_size_v<msgClassVariant_>>();
   void* readBuffer = nullptr;
-  //span used to access buffer
+  // span used to access buffer
   std::span<std::uint8_t, bufferSize> bufferSpan;
   socketType_* socketPtr;
   __attribute__((flatten)) bool validateChecksum(
       std::uint32_t, const std::span<std::uint8_t, bufferSize>&) noexcept;
-  //finds delimiter of next message if it isn't found in the expected place
+  // finds delimiter of next message if it isn't found in the expected place
   __attribute__((noinline)) int scanForDelimiter() noexcept;
   // safely discards excess bytes if an incoming message is longer than any of
   // the message types passed to buffer (and hence longer than buffer) returns
@@ -61,8 +60,9 @@ requires Auxil::readableAsSocket<socketType_> &&
   // remaining bytes can be read within regular program logic
   __attribute__((noinline)) std::uint32_t discardLongMsg(std::uint32_t,
                                                          void*) noexcept;
-	
-  //member function templates to generate "loop" over all message types to find and construct the correct one
+
+  // member function templates to generate "loop" over all message types to find
+  // and construct the correct one
   template <std::size_t... Is>
   int determineMsgType(int, std::index_sequence<Is...>) noexcept;
 
@@ -79,7 +79,7 @@ requires Auxil::readableAsSocket<socketType_> &&
   fixSocketHandler& operator=(fixSocketHandler&&) = delete;
   using msgClassVariant = msgClassVariant_;
   typedef socketType_ socketType;
-  //public interface for reading FIX messages from socket
+  // public interface for reading FIX messages from socket
   __attribute__((flatten)) std::optional<msgClassVariant>
   readNextMessage() noexcept;
 };
@@ -99,17 +99,19 @@ TEMPL_TYPES
 std::optional<msgClassVariant_> SOCK_HANDLER::readNextMessage() noexcept {
   // read length-of-header bytes into buffer
   std::int32_t bytesRead = this->socketPtr->recv(readBuffer, headerLength);
-  
-  // verifiy that header is valid by checking whether delimeter sequence is in expected place
+
+  // verifiy that header is valid by checking whether delimeter sequence is in
+  // expected place
   const std::uint16_t delimitValLocal = delimitValue;
   const auto delimitSpan = std::span<const std::uint8_t, 2>{
       reinterpret_cast<const std::uint8_t*>(&delimitValLocal), 2};
 
-  //determine if bytes read are a valid header, find valid header if they are not
+  // determine if bytes read are a valid header, find valid header if they are
+  // not
   const bool validHeader = std::ranges::equal(
       this->bufferSpan.subspan(delimitOffset, 2), delimitSpan);
   bytesRead = validHeader ? bytesRead : scanForDelimiter();
-  
+
   // extract message length from message header
   int msgLength =
       *(std::uint32_t*)(reinterpret_cast<void*>(&bufferSpan[lengthOffset]));
@@ -120,16 +122,16 @@ std::optional<msgClassVariant_> SOCK_HANDLER::readNextMessage() noexcept {
   // read rest of message into buffer
   void* recvDest = reinterpret_cast<void*>(&this->bufferSpan[bytesRead]);
   this->socketPtr->recv(recvDest, msgLength - bytesRead);
-  
+
   // determine type of received message by checking all types in variant
   static constexpr auto variantIndexSeq =
       std::make_index_sequence<std::variant_size_v<msgClassVariant_>>();
   int msgTypeIndex = determineMsgType(msgLength, variantIndexSeq);
-  
+
   // validate message via checksum, if invalid message is discarded by setting
   // type-index to -1, indicating cold path
   msgTypeIndex = validateChecksum(msgLength, bufferSpan) ? msgTypeIndex : -1;
-  
+
   // enqueue message to buffer
   const auto returnVariant =
       this->constructVariant(msgTypeIndex, this->bufferSpan, variantIndexSeq);
