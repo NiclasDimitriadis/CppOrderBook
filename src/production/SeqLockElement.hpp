@@ -47,7 +47,7 @@ std::tuple<std::optional<contentType_>, std::int64_t> SEQ_LOCK_ELEMENT::read(
     std::atomic_signal_fence(std::memory_order_acq_rel);
     retContent = this->content;
     std::atomic_signal_fence(std::memory_order_acq_rel);
-  } while (initialVersion % 1 || (initialVersion != this->version));
+  } while (initialVersion % 2 || (initialVersion != this->version));
   std::optional<contentType_> retOpt = initialVersion >= prevVersion
                                            ? std::make_optional(retContent)
                                            : std::nullopt;
