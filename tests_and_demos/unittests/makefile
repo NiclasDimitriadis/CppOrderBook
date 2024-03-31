@@ -1,6 +1,6 @@
-CXX = g++
+CXX = g++-13
 COMPILER_FLAGS = -std=c++23 -O3 -ggdb
-INCLUDE_DIRS = -I ../../src/production -I ../../src/testing -I ../../src/testing/doctest
+INCLUDE_DIRS = -I ../../src/production -I ../../src/testing
 UNITS = Unittests_Auxil Unittests_AtomicGuard Unittests_FileToTuples Unittests_FIXmockSocket\
 	 Unittests_FIXsocketHandler Unittests_OrderBook Unittests_SeqLockElement Unittests_SeqLockQueue
 EXECUTABLES = $(addprefix build/,$(UNITS))

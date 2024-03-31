@@ -1,6 +1,6 @@
-CXX = g++
+CXX = g++-13
 COMPILER_FLAGS = -std=c++23 -O3
-INCLUDE_DIRS = -I ../../src/production -I ../../src/testing
+INCLUDE_DIRS = -I ../../src/production -I ../../src/testing -I ../../dependencies/SeqLockQueue/src/production
 UNITS = Profiling_multithreaded Profiling_single_threaded
 EXECUTABLES = $(addprefix build/,$(UNITS))
 OBJ_FILES = $(addsuffix .o,$(EXECUTABLES))

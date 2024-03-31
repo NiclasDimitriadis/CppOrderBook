@@ -26,7 +26,7 @@ Special emphasis was put on techniques enabling low-latency. Those include:
  allocating all their required heap memory during construction and holding on to it until destruction
  and using std::atomic_flag as a lock instead of some flavor of mutex
  - memory-aligning objects in accordance with a 64-byte cacheline
- - ensuring fast multithreaded access to components that support concurrency, namely the seqlock-queue which enables wait-free enqueueing and lock-free dequeueing and the order book which supports lock-free reads via a seqlock as well (a lock is used required for manipulating book entries though) 
+
  
 ---
 
@@ -83,7 +83,7 @@ the components listed below have the sole purpose of enabling unit testing and/o
  - build using `CppOrderBook/tests_and_demos/profiling/makefile`
  - builds executables `profiling_single_threaded` and `profiling_multithreaded`
  - both executables read FIX messages from a mock socket, construct message objects and insert messages into an order book
- - `profiling_multithreaded` hands message off to be inserted by a second thread via `SeqLockQueue::seqLockQueue`
+ - `profiling_multithreaded` hands message off to be inserted by a second thread via `Queue::SeqLockQueue`
  - both executables require the path to a CSV file with test data as first command line argument
  - to achieve CPU-affinity, give index of the core (or indices of two cores for `profiling_multithreaded`)
    you wish the executable to run on as additonal command line arguments
@@ -119,57 +119,6 @@ the components listed below have the sole purpose of enabling unit testing and/o
 - not able to correctly handle an incoming message with valid header and checksum if the message is
  shorter than the shortest message contained in msgClassVar_
 
-
-
-##### SeqLockElement::seqLockElement:
-`template<typename contentType_, std::uint32_t alignment>
-struct seqLockElement`
-###### template parameters:
-- `contentType_`: type of objects to be entered into seqlock queue, must satisfy constraints
- `std::is_default_constructible_v` and `std::is_trivially_copyable_v` for construction of empty 
- queue and insertion respectively
-- `alignment`: alignment of element in queue, use 0 for default alignment
-
-###### description: 
-- encapsulates single entry of seq-lock queue and a version number
-- memory heap-allocated during construction, released during destruction
-
-###### interfaces:
-- `void insert(contentType_ newContent)`:
- inserts new content into element and
- increments version number by 2, will overwrite previous content
-- `std::tuple<std::optional<contentType_>,std::int64_t> read(std::int64_t prevVersion)`:
- returns current version number and and optional with content if argument isnt's larger than current version number or empty optional otherwise. If the version number of the last element read from queue is given as an argument, this ensures that no empty element is read and no element is read twice.
- 
-
-
-##### SeqLockQueue::seqLockQueue:
- `template <typename contentType_, std::uint32_t length_, bool shareCacheline> 
- struct seqLockQueue`
-
-###### template parameters:
-- `contentType_`: type of content queue contains
-- `length_`: number of elements in queue, must be a power of two
-- `shareCacheline`: each element in queue will be aligned to a full cacheline if `shareCacheline == false`
- 
-###### description:
-- single-producer single-consumer queue utilizing a ring buffer that allows for wait-free enqueueing in lock-free dequeueing
- 
-###### interfaces:
-- `void enqueue(contentType_ content)`:
- inserts content into queue
-- `std::optional<contentType> dequeue()`:
- dequeues and returns an element, returns empty optional if queue is empty
-
-###### limitations:
-- no checks for queue overflowing, content will be overwritten and lost
-- if size of content type is small and/or memory used is not a big issue, one should consider
- sizing the queue big enough to avoid wrapping altogether during its lifetime
-- while extending functionality to enable multiple readers would be quite straightforward
- by introducing a class that keeps track of read indices and version numbers for every reader,
- allowing for multiple writers would seriously complicate the underlying logic and likely do away
- with wait free enqueueing
- 
  
  
 #### FIXmsgClasses:

@@ -19,7 +19,7 @@
 #include "FIXmsgClasses.hpp"
 #include "FileToTuples.hpp"
 #include "OrderBook.hpp"
-#include "SeqLockQueue.hpp"
+#include "Queue.hpp"
 #include "busyWait.hpp"
 
 using lineTuple = std::tuple<std::uint8_t, std::int32_t, std::uint32_t>;
@@ -29,7 +29,7 @@ using msgClassVar =
 static constexpr std::uint32_t twoPow20 = 1048576;
 using ordBook =
     OrderBook::orderBook<msgClassVar, std::int64_t, 6000, false, 0, 1, 2>;
-using seqLockQueue = SeqLockQueue::seqLockQueue<msgClassVar, twoPow20, false>;
+using seqLockQueue = Queue::SeqLockQueue<msgClassVar, twoPow20, false, false>;
 using sockHandler =
     FIXSocketHandler::fixSocketHandler<msgClassVar,
                                        FIXmockSocket::fixMockSocket>;
@@ -128,6 +128,7 @@ int main(int argc, char* argv[]) {
   // order book
   alignas(64) auto book = ordBook(7000);
   seqLockQueue slq;
+  auto reader = slq.get_reader();
   std::vector<timePoint> completionTimes(nMsgs);
   std::optional<msgClassVar> deqRet;
 
@@ -143,7 +144,7 @@ int main(int argc, char* argv[]) {
 
   // dequeue messages and insert them into order book
   do {
-    deqRet = slq.dequeue();
+    deqRet = reader.read_next_entry();
     if (deqRet.has_value()) {
       book.processOrder(deqRet.value());
       completionTime = std::chrono::high_resolution_clock::now();

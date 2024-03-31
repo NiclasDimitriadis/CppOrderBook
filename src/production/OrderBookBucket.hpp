@@ -21,6 +21,7 @@ struct alignas(alignment) orderBookBucket {
 
 namespace OrderBookBucket {
 template <typename EntryType, std::uint32_t alignment>
+requires std::signed_integral<EntryType>
 EntryType orderBookBucket<EntryType, alignment>::consumeLiquidity(
     EntryType fillVolume) noexcept {
   const bool demandLiquidity = Auxil::is_negative(this->volume);
@@ -37,12 +38,14 @@ EntryType orderBookBucket<EntryType, alignment>::consumeLiquidity(
 };
 
 template <typename EntryType, std::uint32_t alignment>
+requires std::signed_integral<EntryType>
 void orderBookBucket<EntryType, alignment>::addLiquidity(
     EntryType addVolume) noexcept {
   this->volume += addVolume;
 };
 
 template <typename EntryType, std::uint32_t alignment>
+requires std::signed_integral<EntryType>
 EntryType orderBookBucket<EntryType, alignment>::getVolume() noexcept {
   return this->volume;
 };
