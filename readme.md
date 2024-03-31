@@ -1,3 +1,4 @@
+### deprecated in favor of CppOrderBook2
 #### requirements:
  - project has been compiled using g++12.1.0 and tested on Ubuntu 22.04.2 LTS
  - compilation requires C++23 support
